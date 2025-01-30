@@ -1,0 +1,111 @@
+
+-- admin account noa password noa
+INSERT INTO [webshop].[dbo].[Users] 
+(Username, PasswordHash, IsAdmin) 
+VALUES 
+('noa', 'dGe5FNdx/P2SkYlHaPpUVDsvfEUmXN3Iu2qXFo8hQyg=', 1);
+
+INSERT INTO [webshop].[dbo].[Customers] 
+(FullName, Address, City, PostalCode, Country, Phone, UserId) 
+VALUES 
+('Noa', 'Storgatan 5', 'Gnesta', '6457', 'Sweden', '070123456', 
+ (SELECT Id FROM [webshop].[dbo].[Users] WHERE Username = 'noa'));
+
+INSERT INTO [dbo].[Categories] ( [Name])
+VALUES 
+( 'Shirts'),
+( 'Pants'),
+( 'Shoes');
+
+
+INSERT INTO [dbo].[Products] 
+([Name], [Description], [Price], [Stock], [CategoryId], [IsFeatured]) 
+VALUES 
+-- Shirts
+( 'Classic Tee', 'Comfortable cotton T-shirt', 15.99, 20, 1, 1),
+( 'Polo Shirt', 'Stylish polo for all occasions', 24.99, 15, 1, 0),
+( 'Flannel Shirt', 'Warm and cozy flannel shirt', 29.99, 10, 1, 0),
+( 'Linen Shirt', 'Breathable summer linen shirt', 34.99, 8, 1, 1),
+( 'Graphic Tee', 'Trendy T-shirt with cool design', 19.99, 12, 1, 0),
+
+-- Pants
+( 'Slim Fit Jeans', 'Stretchy and stylish jeans', 49.99, 15, 2, 1),
+( 'Cargo Pants', 'Durable and practical cargo pants', 39.99, 12, 2, 0),
+( 'Chino Pants', 'Comfortable and casual chinos', 44.99, 10, 2, 0),
+( 'Jogger Pants', 'Soft and relaxed-fit joggers', 34.99, 18, 2, 1),
+( 'Formal Trousers', 'Perfect for business wear', 54.99, 7, 2, 0),
+
+-- Shoes
+( 'Running Shoes', 'Lightweight and comfortable running shoes', 59.99, 20, 3, 1),
+( 'Sneakers', 'Stylish and casual sneakers', 49.99, 18, 3, 0),
+( 'Leather Boots', 'Durable and waterproof boots', 79.99, 10, 3, 0),
+( 'Loafers', 'Elegant slip-on shoes for any occasion', 69.99, 8, 3, 1),
+( 'Sandals', 'Breathable summer sandals', 29.99, 15, 3, 0);
+
+
+INSERT INTO [dbo].[Users] ([Username], [PasswordHash], [IsAdmin]) 
+VALUES 
+('john_doe', 'hashed_password_1', 0),
+('jane_smith', 'hashed_password_2', 1),
+('michael_brown', 'hashed_password_3', 0);
+
+INSERT INTO [dbo].[Customers] 
+([FullName], [Address], [City], [PostalCode], [Country], [Phone], [UserId])
+VALUES 
+('John Doe', '123 Elm St', 'Stockholm', '11122', 'Sweden', '+46 700123456', (SELECT Id FROM [dbo].[Users] WHERE Username = 'john_doe')),
+('Jane Smith', '45 Birch Rd', 'Gothenburg', '33344', 'Sweden', '+46 701234567', (SELECT Id FROM [dbo].[Users] WHERE Username = 'jane_smith')),
+('Michael Brown', '78 Oak Ave', 'Malmo', '55566', 'Sweden', '+46 702345678', (SELECT Id FROM [dbo].[Users] WHERE Username = 'michael_brown'));
+
+INSERT INTO [dbo].[Orders] 
+([OrderDate], [Total], [ShippingCost], [VAT], [UserId], [CustomerId])
+VALUES 
+('2024-09-05', 149.97, 10.00, 12.50, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'john_doe'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'John Doe')),
+('2024-09-12', 89.99, 5.00, 7.20, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'jane_smith'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Jane Smith')),
+('2024-09-18', 199.95, 15.00, 16.60, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'michael_brown'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Michael Brown')),
+('2024-10-02', 134.50, 7.50, 10.75, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'john_doe'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'John Doe')),
+('2024-10-10', 78.25, 5.00, 6.50, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'jane_smith'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Jane Smith')),
+('2024-10-15', 249.99, 12.00, 20.00, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'michael_brown'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Michael Brown')),
+('2024-10-20', 102.75, 8.00, 9.00, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'john_doe'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'John Doe')),
+('2024-11-05', 189.50, 9.50, 15.80, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'jane_smith'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Jane Smith')),
+('2024-11-11', 99.99, 6.00, 8.00, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'michael_brown'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Michael Brown')),
+('2024-11-18', 125.75, 7.50, 10.25, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'john_doe'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'John Doe')),
+('2024-11-25', 210.99, 10.00, 18.00, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'jane_smith'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Jane Smith')),
+('2024-12-01', 159.99, 9.00, 13.75, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'michael_brown'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Michael Brown')),
+('2024-12-08', 89.49, 5.50, 7.10, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'john_doe'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'John Doe')),
+('2024-12-15', 249.00, 12.50, 19.99, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'jane_smith'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Jane Smith')),
+('2024-12-22', 179.99, 11.00, 15.50, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'michael_brown'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Michael Brown'));
+
+INSERT INTO [dbo].[OrderItems] 
+([ProductId], [Quantity], [OrderId]) 
+VALUES 
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Classic Tee'), 2, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-09-05')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Slim Fit Jeans'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-09-05')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Running Shoes'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-09-12')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Loafers'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-09-18')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Polo Shirt'), 3, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-10-02')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Cargo Pants'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-10-10')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Formal Trousers'), 2, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-10-15')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Flannel Shirt'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-10-20')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Chino Pants'), 2, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-11-05')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Sneakers'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-11-11')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Sandals'), 3, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-11-18')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Linen Shirt'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-11-25')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Graphic Tee'), 2, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-12-01')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Jogger Pants'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-12-08')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Leather Boots'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-12-15')),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Chino Pants'), 2, (SELECT Id FROM  [dbo].[Orders] WHERE OrderDate = '2024-12-22'));
+
+INSERT INTO [dbo].[Orders] 
+([OrderDate], [Total], [ShippingCost], [VAT], [UserId], [CustomerId])
+VALUES 
+(GETDATE(), 149.97, 10.00, 12.50, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'john_doe'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'John Doe')),
+(GETDATE(), 89.99, 5.00, 7.20, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'jane_smith'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Jane Smith')),
+(GETDATE(), 199.95, 15.00, 16.60, (SELECT Id FROM  [dbo].[Users] WHERE Username = 'michael_brown'), (SELECT Id FROM  [dbo].[Customers] WHERE FullName = 'Michael Brown'));
+
+INSERT INTO  [dbo].[OrderItems] 
+([ProductId], [Quantity], [OrderId]) 
+VALUES 
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Classic Tee'), 2, (SELECT Id FROM  [dbo].[Orders] WHERE Total = 149.97)),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Slim Fit Jeans'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE Total = 149.97)),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Running Shoes'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE Total = 89.99)),
+((SELECT Id FROM  [dbo].[Products] WHERE Name = 'Loafers'), 1, (SELECT Id FROM  [dbo].[Orders] WHERE Total = 199.95));
