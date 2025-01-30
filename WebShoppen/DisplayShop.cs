@@ -130,6 +130,13 @@ namespace WebShoppen
         public static void ShowCartPage(User user)
         {
             using var db = new AppDbContext();
+
+            // Ensure the user's cart is loaded from the database
+            user.Cart = db.Carts
+                .Include(c => c.Items)
+                .ThenInclude(i => i.Product) // Ensure products are loaded
+                .FirstOrDefault(c => c.UserId == user.Id);
+
             while (true)
             {
                 Console.Clear();
@@ -143,71 +150,169 @@ namespace WebShoppen
                     return;
                 }
 
+                // Display cart items
                 var cartItems = user.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
+                var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
+                cartItems.Add($"Total: {total} SEK");
+
                 var windowCartWithItems = new Window("CART", 2, 2, cartItems);
                 windowCartWithItems.Draw();
 
-                Console.SetCursorPosition(2, cartItems.Count + 4);
-                Console.Write("Enter product ID to remove (0 to proceed to checkout): ");
-                int productId = Helper.GetValidInteger();
+                // Options for the user
+                var options = new List<string>
+        {
+            "1. Change Quantity",
+            "2. Remove Product",
+            "3. Proceed to Shipping",
+            "4. Back to Main Menu"
+        };
+                var windowOptions = new Window("OPTIONS", 2, cartItems.Count + 4, options);
+                windowOptions.Draw();
 
-                if (productId > 0)
+                Console.SetCursorPosition(2, cartItems.Count + options.Count + 6);
+                Console.Write("Enter your choice: ");
+                int choice = Helper.GetValidInteger();
+
+                switch (choice)
                 {
-                    ProductService.RemoveFromCart(user, productId);
-                }
-                else
-                {
-                    break;
+                    case 1:
+                        Console.Write("Enter product ID to change quantity: ");
+                        int productIdToChange = Helper.GetValidInteger();
+                        var itemToChange = user.Cart.Items.FirstOrDefault(i => i.ProductId == productIdToChange);
+                        if (itemToChange != null)
+                        {
+                            Console.Write("Enter new quantity: ");
+                            int newQuantity = Helper.GetValidInteger();
+                            if (newQuantity > 0)
+                            {
+                                itemToChange.Quantity = newQuantity;
+                                db.SaveChanges();
+                                Console.WriteLine("Quantity updated!");
+                            }
+                            else
+                            {
+                                Console.WriteLine("Quantity must be greater than 0.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Product not found in cart.");
+                        }
+                        Helper.PressKeyToContinue();
+                        break;
+
+                    case 2:
+                        Console.Write("Enter product ID to remove: ");
+                        int productIdToRemove = Helper.GetValidInteger();
+                        ProductService.RemoveFromCart(user, productIdToRemove);
+                        Helper.PressKeyToContinue();
+                        break;
+
+                    case 3:
+                        ShowShippingPage(user);
+                        return;
+
+                    case 4:
+                        return;
+
+                    default:
+                        Console.WriteLine("Invalid choice. Please try again.");
+                        Helper.PressKeyToContinue();
+                        break;
                 }
             }
-
-            // Proceed to checkout
-            ProductService.Checkout(user);
-            Helper.PressKeyToContinue();
         }
 
-        //public static void ShowShippingPage(User user)
-        //{
-        //    var shippingOptions = new List<string>
-        //        {
-        //            "1. Standard Shipping - 50 SEK",
-        //            "2. Express Shipping - 100 SEK"
-        //        };
-        //    var windowShipping = new Window("SHIPPING OPTIONS", 2, 2, shippingOptions);
-        //    windowShipping.Draw();
+        public static void ShowShippingPage(User user)
+        {
+            using var db = new AppDbContext();
 
-        //    Console.SetCursorPosition(2, 6);
-        //    Console.Write("Enter shipping option: ");
-        //    int shippingOption = Helper.GetValidInteger();
-        //    int shippingCost = shippingOption == 1 ? 50 : 100;
+            // Ensure the user's cart is loaded from the database
+            user.Cart = db.Carts
+                .Include(c => c.Items)
+                .ThenInclude(i => i.Product) // Ensure products are loaded
+                .FirstOrDefault(c => c.UserId == user.Id);
 
-        //    Console.Write("Enter your Name: ");
-        //    string name = Console.ReadLine();
-        //    Console.Write("Enter Address: ");
-        //    string address = Console.ReadLine();
+            Console.Clear();
 
-        //    user.Cart.ShippingCost = shippingCost;
-        //}
+            // Display cart items and total
+            var cartItems = user.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
+            var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
+            cartItems.Add($"Total: {total} SEK");
 
-        //public static async Task ShowPaymentPage(AppDbContext db, User user)
-        //{
-        //    var cartItems = user.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
-        //    cartItems.Add($"Shipping: {user.Cart.ShippingCost} SEK");
-        //    cartItems.Add($"Total Price: {user.Cart.Items.Sum(i => i.Product.Price * i.Quantity) + user.Cart.ShippingCost} SEK");
+            var windowCart = new Window("CART", 2, 2, cartItems);
+            windowCart.Draw();
 
-        //    var windowPayment = new Window("PAYMENT", 2, 2, cartItems);
-        //    windowPayment.Draw();
+            // Shipping options
+            var shippingOptions = new List<string>
+    {
+        "1. Standard Shipping - 50 SEK",
+        "2. Express Shipping - 100 SEK"
+    };
+            var windowShipping = new Window("SHIPPING OPTIONS", 2, cartItems.Count + 4, shippingOptions);
+            windowShipping.Draw();
 
-        //    var paymentOptions = new List<string> { "1. Credit Card", "2. PayPal" };
-        //    var windowPaymentOptions = new Window("CHOOSE PAYMENT METHOD", 2, 8, paymentOptions);
-        //    windowPaymentOptions.Draw();
+            Console.SetCursorPosition(2, cartItems.Count + shippingOptions.Count + 6);
+            Console.Write("Enter shipping option: ");
+            int shippingOption = Helper.GetValidInteger();
 
-        //    Console.SetCursorPosition(2, 12);
-        //    Console.Write("Enter payment method: ");
-        //    Console.ReadLine();
+            decimal shippingCost = shippingOption == 1 ? 50 : 100;
 
-        //    await ProductService.Checkout(db, user);
-        //    Console.WriteLine("Payment successful! Your order has been placed.");
-        //}
+            // Collect customer details
+            Console.Write("Enter your Name: ");
+            string name = Console.ReadLine();
+            Console.Write("Enter Address: ");
+            string address = Console.ReadLine();
+
+            // Save shipping cost and proceed to payment
+            user.Cart.ShippingCost = shippingCost;
+            db.SaveChanges();
+            ShowPaymentPage(user);
+        }
+
+        public static void ShowPaymentPage(User user)
+        {
+            using var db = new AppDbContext();
+
+            // Ensure the user's cart is loaded from the database
+            user.Cart = db.Carts
+                .Include(c => c.Items)
+                .ThenInclude(i => i.Product) // Ensure products are loaded
+                .FirstOrDefault(c => c.UserId == user.Id);
+
+            Console.Clear();
+
+            // Display cart items and total
+            var cartItems = user.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
+            var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
+            var shippingCost = user.Cart.ShippingCost;
+            var tax = (total + shippingCost) * 0.25m; // 25% VAT
+            var grandTotal = total + shippingCost + tax;
+
+            cartItems.Add($"Shipping: {shippingCost} SEK");
+            cartItems.Add($"Tax: {tax} SEK");
+            cartItems.Add($"Total Price: {grandTotal} SEK");
+
+            var windowCart = new Window("CART", 2, 2, cartItems);
+            windowCart.Draw();
+
+            // Payment options
+            var paymentOptions = new List<string>
+    {
+        "1. Credit Card",
+        "2. PayPal"
+    };
+            var windowPayment = new Window("PAYMENT OPTIONS", 2, cartItems.Count + 4, paymentOptions);
+            windowPayment.Draw();
+
+            Console.SetCursorPosition(2, cartItems.Count + paymentOptions.Count + 6);
+            Console.Write("Enter payment method: ");
+            int paymentMethod = Helper.GetValidInteger();
+
+            // Place the order and clear the cart
+            ProductService.Checkout(user);
+            Console.WriteLine("Payment successful! Your order has been placed.");
+            Helper.PressKeyToContinue();
+        }
     }
 }

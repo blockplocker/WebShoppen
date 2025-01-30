@@ -23,12 +23,12 @@ namespace WebShoppen
                 }
                 else
                 {
-                    ShowMainMenu(db, ref currentUser);
+                    currentUser = ShowMainMenu(currentUser);
                 }
             }
         }
 
-        static void ShowGuestMenu( ref User currentUser)
+        static void ShowGuestMenu(ref User currentUser)
         {
             var guestMenu = new List<string> { "1. Login", "2. Register", "3. Exit" };
             var windowGuest = new Window("WELCOME TO WEBSHOP", 2, 2, guestMenu);
@@ -51,47 +51,117 @@ namespace WebShoppen
             }
         }
 
-        static void ShowMainMenu(AppDbContext db, ref User currentUser)
+        static User ShowMainMenu(User currentUser)
         {
+
             while (true)
             {
+            using var db = new AppDbContext();
+                // Ensure the user's cart is loaded from the database
+                currentUser.Cart = db.Carts
+                    .Include(c => c.Items)
+                    .ThenInclude(i => i.Product) // Ensure products are loaded
+                    .FirstOrDefault(c => c.UserId == currentUser.Id);
+
                 Console.Clear();
                 var userMenu = new List<string>
         {
             $"Logged in as: {currentUser.Username}",
-            "1. Homepage",
-            "2. Shop",
-            "3. View Cart",
-            "4. Checkout",
-            "5. Admin Panel",
-            "6. Logout"
+            "1. Shop",
+            "2. View Cart",
+            "3. Checkout",
+            "4. Logout",
+            (currentUser.IsAdmin ? "5. Admin Panel" : "")
         };
                 var windowUserMenu = new Window("MAIN MENU", 2, 2, userMenu);
                 windowUserMenu.Draw();
 
-                Console.SetCursorPosition(2, userMenu.Count + 4);
+                var welcomeText = new List<string> { "Welcome to Our Webshop!", "Find the best products at great prices!" };
+                var windowWelcome = new Window("HOME", 25, 2, welcomeText);
+                windowWelcome.Draw();
+
+                var featuredProducts = db.Products.Where(p => p.IsFeatured).Take(3).ToList();
+
+                if (featuredProducts.Count > 0)
+                {
+                    var Product1 = featuredProducts[0];
+                    var featuredProductList1 = new List<string> { Product1.Name, Product1.Description, "Price: " + Product1.Price + " kr", "Press A to buy" };
+                    var windowFeatured1 = new Window("FEATURED PRODUCT 1", 2, 11, featuredProductList1);
+                    windowFeatured1.Draw();
+                }
+
+                if (featuredProducts.Count > 1)
+                {
+                    var Product2 = featuredProducts[1];
+                    var featuredProductList2 = new List<string> { Product2.Name, Product2.Description, "Price: " + Product2.Price + " kr", "Press B to buy" };
+                    var windowFeatured2 = new Window("FEATURED PRODUCT 2", 30, 11, featuredProductList2);
+                    windowFeatured2.Draw();
+                }
+
+                if (featuredProducts.Count > 2)
+                {
+                    var Product3 = featuredProducts[2];
+                    var featuredProductList3 = new List<string> { Product3.Name, Product3.Description, "Price: " + Product3.Price + " kr", "Press C to buy" };
+                    var windowFeatured3 = new Window("FEATURED PRODUCT 3", 58, 11, featuredProductList3);
+                    windowFeatured3.Draw();
+                }
+
+                if (currentUser?.Cart?.Items == null || !currentUser.Cart.Items.Any())
+                {
+                    var emptyCart = new List<string> { "Your cart is empty!" };
+                    var windowCart = new Window("CART", 100, 2, emptyCart);
+                    windowCart.Draw();
+                }
+                else
+                {
+                    var cartItems = currentUser.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} ").ToList();
+                    var windowCartWithItems = new Window("CART", 100, 2, cartItems);
+                    windowCartWithItems.Draw();
+                }
+
+                Console.SetCursorPosition(2, 18);
                 var choice = Console.ReadLine();
 
                 switch (choice)
                 {
-                    case "1":
-                        DisplayShop.ShowHomePage();
+                    case "A":
+                    case "a":
+                        if (featuredProducts.Count > 0)
+                        {
+                            ProductService.AddToCart(currentUser, featuredProducts[0].Id, 1);
+                        }
                         break;
-                    case "2":
+                    case "B":
+                    case "b":
+                        if (featuredProducts.Count > 1)
+                        {
+                            ProductService.AddToCart(currentUser, featuredProducts[1].Id, 1);
+                        }
+                        break;
+                    case "C":
+                    case "c":
+                        if (featuredProducts.Count > 2)
+                        {
+                            ProductService.AddToCart(currentUser, featuredProducts[2].Id, 1);
+                        }
+                        break;
+                    case "1":
                         DisplayShop.ShowShopPage(currentUser);
                         break;
-                    case "3":
+                    case "2":
                         DisplayShop.ShowCartPage(currentUser);
                         break;
-                    case "4":
+                    case "3":
                         ProductService.Checkout(currentUser);
                         break;
+                    case "4":
+                        return null;
                     case "5":
-                        Admin.AdminPanel();
+                        if (currentUser.IsAdmin)
+                        {
+                            Admin.AdminPanel();
+                        }
                         break;
-                    case "6":
-                        currentUser = null;
-                        return;
                 }
             }
         }
