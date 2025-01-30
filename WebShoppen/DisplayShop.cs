@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using WebShoppen.Models;
 
@@ -69,7 +70,7 @@ namespace WebShoppen
 
                 // Display categories
                 var categories = db.Categories.ToList();
-                var categoryList = categories.Select(c => $"{c.Id}. {c.Name}").ToList();
+                var categoryList = categories.Select(c => $"Id: {c.Id} {c.Name}").ToList();
                 var windowCategories = new Window("SHOP CATEGORIES", 2, 2, categoryList);
                 windowCategories.Draw();
 
@@ -81,7 +82,7 @@ namespace WebShoppen
 
                 // Display products in the selected category
                 var products = db.Products.Where(p => p.CategoryId == categoryId).ToList();
-                var productList = products.Select(p => $"{p.Id}. {p.Name} - {p.Price} SEK").ToList();
+                var productList = products.Select(p => $"Id: {p.Id} {p.Name} - {p.Price} SEK").ToList();
                 var windowProducts = new Window("PRODUCTS", 2, 8, productList);
                 windowProducts.Draw();
 
@@ -151,7 +152,7 @@ namespace WebShoppen
                 }
 
                 // Display cart items
-                var cartItems = user.Cart.Items.Select(i => $"Id: {i.Id} - {i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
+                var cartItems = user.Cart.Items.Select(i => $"Id: {i.ProductId} - {i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
                 var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
                 cartItems.Add($"Total: {total} SEK");
 
@@ -248,6 +249,10 @@ namespace WebShoppen
                     customerDetails.Add("Existing Customer Details:");
                     customerDetails.Add($"Name: {customer.FullName}");
                     customerDetails.Add($"Address: {customer.Address}");
+                    customerDetails.Add($"Country: {customer.Country}");
+                    customerDetails.Add($"City: {customer.City}");
+                    customerDetails.Add($"Postal Code: {customer.PostalCode}");
+                    customerDetails.Add($"Phone Number: {customer.Phone}");
                     customerDetails.Add($"Use existing details? (Y/N)");
                 }
 
@@ -264,32 +269,42 @@ namespace WebShoppen
                 }
 
                 // Collect/update details
-                Console.SetCursorPosition(2, 8);
+                Console.SetCursorPosition(2, 13);
                 Console.Write("Full Name: ");
                 customer.FullName = Console.ReadLine();
 
-                Console.SetCursorPosition(2, 9);
+                Console.SetCursorPosition(2, 14);
                 Console.Write("Address: ");
                 customer.Address = Console.ReadLine();
 
-                Console.SetCursorPosition(2, 10);
+                Console.SetCursorPosition(2, 15);
+                Console.Write("Country: ");
+                customer.Country = Console.ReadLine();
+
+                Console.SetCursorPosition(2, 16);
                 Console.Write("City: ");
                 customer.City = Console.ReadLine();
 
-                Console.SetCursorPosition(2, 11);
+                Console.SetCursorPosition(2, 17);
                 Console.Write("Postal Code: ");
                 customer.PostalCode = Console.ReadLine();
+
+                Console.SetCursorPosition(2, 18);
+                Console.Write("Phone nummber: ");
+                customer.Phone = Console.ReadLine();
+
+                // Save changes and verify
 
                 if (isNewCustomer)
                 {
                     db.Customers.Add(customer);
                 }
-                else
-                {
-                    db.Customers.Update(customer);
-                }
                 db.SaveChanges();
+
+                // Refresh customer to ensure ID is populated
+                customer = db.Customers.First(c => c.UserId == user.Id);
                 break;
+
             }
             // Shipping options
             var shippingOptions = new List<string> { "1. Standard Shipping - 50 SEK", "2. Express Shipping - 100 SEK" };
@@ -341,8 +356,6 @@ namespace WebShoppen
 
             // Place the order and clear the cart
             ProductService.Checkout(user, shippingCost);
-            Console.WriteLine("Payment successful! Your order has been placed.");
-            Helper.PressKeyToContinue();
         }
     }
 }

@@ -96,7 +96,14 @@ namespace WebShoppen
                 .ThenInclude(i => i.Product)
                 .FirstOrDefault(c => c.UserId == user.Id);
 
+            // Load customer
             var customer = db.Customers.FirstOrDefault(c => c.UserId == user.Id);
+            if (customer == null)
+            {
+                Console.WriteLine("Customer details not found. Complete shipping first.");
+                Helper.PressKeyToContinue();
+                return;
+            }
 
             // Calculate totals
             var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
@@ -123,7 +130,7 @@ namespace WebShoppen
             db.Carts.Remove(user.Cart);
             db.SaveChanges();
 
-            Console.WriteLine("Order placed successfully!");
+            Console.WriteLine("Payment successful! Your order has been placed.");
             Helper.PressKeyToContinue();
         }
     }

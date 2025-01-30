@@ -93,7 +93,7 @@ namespace WebShoppen
                 {
                     var Product2 = featuredProducts[1];
                     var featuredProductList2 = new List<string> { Product2.Name, Product2.Description, "Price: " + Product2.Price + " kr", "Press B to buy" };
-                    var windowFeatured2 = new Window("FEATURED PRODUCT 2", 30, 11, featuredProductList2);
+                    var windowFeatured2 = new Window("FEATURED PRODUCT 2", 35, 11, featuredProductList2);
                     windowFeatured2.Draw();
                 }
 
@@ -101,7 +101,7 @@ namespace WebShoppen
                 {
                     var Product3 = featuredProducts[2];
                     var featuredProductList3 = new List<string> { Product3.Name, Product3.Description, "Price: " + Product3.Price + " kr", "Press C to buy" };
-                    var windowFeatured3 = new Window("FEATURED PRODUCT 3", 58, 11, featuredProductList3);
+                    var windowFeatured3 = new Window("FEATURED PRODUCT 3", 68, 11, featuredProductList3);
                     windowFeatured3.Draw();
                 }
 
