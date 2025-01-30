@@ -69,8 +69,7 @@ namespace WebShoppen
             $"Logged in as: {currentUser.Username}",
             "1. Shop",
             "2. View Cart",
-            "3. Checkout",
-            "4. Logout",
+            "3. Logout",
             (currentUser.IsAdmin ? "5. Admin Panel" : "")
         };
                 var windowUserMenu = new Window("MAIN MENU", 2, 2, userMenu);
@@ -152,9 +151,6 @@ namespace WebShoppen
                         DisplayShop.ShowCartPage(currentUser);
                         break;
                     case "3":
-                        ProductService.Checkout(currentUser);
-                        break;
-                    case "4":
                         return null;
                     case "5":
                         if (currentUser.IsAdmin)

@@ -151,7 +151,7 @@ namespace WebShoppen
                 }
 
                 // Display cart items
-                var cartItems = user.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
+                var cartItems = user.Cart.Items.Select(i => $"Id: {i.Id} - {i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
                 var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
                 cartItems.Add($"Total: {total} SEK");
 
@@ -227,50 +227,85 @@ namespace WebShoppen
         {
             using var db = new AppDbContext();
 
-            // Ensure the user's cart is loaded from the database
-            user.Cart = db.Carts
-                .Include(c => c.Items)
-                .ThenInclude(i => i.Product) // Ensure products are loaded
-                .FirstOrDefault(c => c.UserId == user.Id);
+            // Load or create customer
+            var customer = db.Customers.FirstOrDefault(c => c.UserId == user.Id);
+            bool isNewCustomer = customer == null;
+
+
+            while (true)
+            {
+                Console.Clear();
+
+                // Customer details form
+                var customerDetails = new List<string>();
+                if (isNewCustomer)
+                {
+                    customer = new Customer { UserId = user.Id };
+                    customerDetails.Add("New Customer Details:");
+                }
+                else
+                {
+                    customerDetails.Add("Existing Customer Details:");
+                    customerDetails.Add($"Name: {customer.FullName}");
+                    customerDetails.Add($"Address: {customer.Address}");
+                    customerDetails.Add($"Use existing details? (Y/N)");
+                }
+
+                var windowCustomer = new Window("CUSTOMER DETAILS", 2, 2, customerDetails);
+                windowCustomer.Draw();
+
+                if (!isNewCustomer)
+                {
+                    var choice = Console.ReadKey().KeyChar.ToString().ToUpper();
+                    if (choice == "Y")
+                    {
+                        break; // Use existing details
+                    }
+                }
+
+                // Collect/update details
+                Console.SetCursorPosition(2, 8);
+                Console.Write("Full Name: ");
+                customer.FullName = Console.ReadLine();
+
+                Console.SetCursorPosition(2, 9);
+                Console.Write("Address: ");
+                customer.Address = Console.ReadLine();
+
+                Console.SetCursorPosition(2, 10);
+                Console.Write("City: ");
+                customer.City = Console.ReadLine();
+
+                Console.SetCursorPosition(2, 11);
+                Console.Write("Postal Code: ");
+                customer.PostalCode = Console.ReadLine();
+
+                if (isNewCustomer)
+                {
+                    db.Customers.Add(customer);
+                }
+                else
+                {
+                    db.Customers.Update(customer);
+                }
+                db.SaveChanges();
+                break;
+            }
+            // Shipping options
+            var shippingOptions = new List<string> { "1. Standard Shipping - 50 SEK", "2. Express Shipping - 100 SEK" };
 
             Console.Clear();
-
-            // Display cart items and total
-            var cartItems = user.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
-            var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
-            cartItems.Add($"Total: {total} SEK");
-
-            var windowCart = new Window("CART", 2, 2, cartItems);
-            windowCart.Draw();
-
-            // Shipping options
-            var shippingOptions = new List<string>
-    {
-        "1. Standard Shipping - 50 SEK",
-        "2. Express Shipping - 100 SEK"
-    };
-            var windowShipping = new Window("SHIPPING OPTIONS", 2, cartItems.Count + 4, shippingOptions);
+            var windowShipping = new Window("SHIPPING OPTIONS", 2, 2, shippingOptions);
             windowShipping.Draw();
 
-            Console.SetCursorPosition(2, cartItems.Count + shippingOptions.Count + 6);
+            Console.SetCursorPosition(2, 6);
             Console.Write("Enter shipping option: ");
-            int shippingOption = Helper.GetValidInteger();
+            int shippingCost = Console.ReadLine() == "1" ? 50 : 100;
 
-            decimal shippingCost = shippingOption == 1 ? 50 : 100;
-
-            // Collect customer details
-            Console.Write("Enter your Name: ");
-            string name = Console.ReadLine();
-            Console.Write("Enter Address: ");
-            string address = Console.ReadLine();
-
-            // Save shipping cost and proceed to payment
-            user.Cart.ShippingCost = shippingCost;
-            db.SaveChanges();
-            ShowPaymentPage(user);
+            ShowPaymentPage(user, shippingCost);
         }
 
-        public static void ShowPaymentPage(User user)
+        public static void ShowPaymentPage(User user, int shippingCost)
         {
             using var db = new AppDbContext();
 
@@ -285,23 +320,18 @@ namespace WebShoppen
             // Display cart items and total
             var cartItems = user.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} - {i.Product.Price * i.Quantity} SEK").ToList();
             var total = user.Cart.Items.Sum(i => i.Quantity * i.Product.Price);
-            var shippingCost = user.Cart.ShippingCost;
-            var tax = (total + shippingCost) * 0.25m; // 25% VAT
-            var grandTotal = total + shippingCost + tax;
+            var tax = (total + shippingCost) * 0.25m; // 25% tax
+            var TotalPrice = total + shippingCost + tax;
 
             cartItems.Add($"Shipping: {shippingCost} SEK");
             cartItems.Add($"Tax: {tax} SEK");
-            cartItems.Add($"Total Price: {grandTotal} SEK");
+            cartItems.Add($"Total Price: {TotalPrice} SEK");
 
             var windowCart = new Window("CART", 2, 2, cartItems);
             windowCart.Draw();
 
             // Payment options
-            var paymentOptions = new List<string>
-    {
-        "1. Credit Card",
-        "2. PayPal"
-    };
+            var paymentOptions = new List<string> { "1. Credit Card", "2. PayPal" };
             var windowPayment = new Window("PAYMENT OPTIONS", 2, cartItems.Count + 4, paymentOptions);
             windowPayment.Draw();
 
@@ -310,7 +340,7 @@ namespace WebShoppen
             int paymentMethod = Helper.GetValidInteger();
 
             // Place the order and clear the cart
-            ProductService.Checkout(user);
+            ProductService.Checkout(user, shippingCost);
             Console.WriteLine("Payment successful! Your order has been placed.");
             Helper.PressKeyToContinue();
         }

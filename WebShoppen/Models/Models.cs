@@ -33,8 +33,16 @@ namespace WebShoppen.Models
         public DateTime OrderDate { get; set; }
         public List<OrderItem> Items { get; set; }
         public decimal Total { get; set; }
+        public decimal ShippingCost { get; set; }
+        public decimal VAT { get; set; }
+
+        // Link to Customer
+        public int CustomerId { get; set; }
+        public Customer Customer { get; set; }
+
+        // Link to User
         public int UserId { get; set; }
-        public string Address { get; set; }
+        public User User { get; set; }
     }
 
     public class OrderItem
@@ -43,6 +51,20 @@ namespace WebShoppen.Models
         public int ProductId { get; set; }
         public int Quantity { get; set; }
     }
+    public class Customer
+    {
+        public int Id { get; set; }
+        public string FullName { get; set; }
+        public string Address { get; set; }
+        public string City { get; set; }
+        public string PostalCode { get; set; }
+        public string Country { get; set; }
+        public string Phone { get; set; }
+
+        // Link to User
+        public int UserId { get; set; }
+        public User User { get; set; }
+    }
     public class User
     {
         public int Id { get; set; }
@@ -50,6 +72,7 @@ namespace WebShoppen.Models
         public string PasswordHash { get; set; }
         public bool IsAdmin { get; set; }
         public Cart Cart { get; set; }
+        public Customer Customer { get; set; } 
     }
 
     public class Cart
@@ -73,9 +96,31 @@ namespace WebShoppen.Models
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<Customer> Customers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Customer)
+                .WithOne(c => c.User)
+                .HasForeignKey<Customer>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.User)
+                .WithMany()
+                .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.NoAction);  
+
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.Customer)
+                .WithMany()
+                .HasForeignKey(o => o.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
