@@ -16,7 +16,7 @@ namespace WebShoppen
             while (true)
             {
                 Console.Clear();
-                var adminOptions = new List<string> { "1. Manage Products", "2. Manage Categories", "3. Manage Users", "4. Exit" };
+                var adminOptions = new List<string> { "1. Manage Products", "2. Manage Categories", "3. Manage Users", "4. Statistics", "5. Exit" };
                 var windowAdmin = new Window("ADMIN PANEL", 2, 2, adminOptions);
                 windowAdmin.Draw();
 
@@ -45,6 +45,9 @@ namespace WebShoppen
                         ManageUsers();
                         break;
                     case 4:
+                        AdminStatisticsService.ShowStatistics().Wait();
+                        break;
+                    case 5:
                         return;
                     default:
                         Console.WriteLine("Invalid choice. Please try again.");
@@ -282,74 +285,184 @@ namespace WebShoppen
             {
                 Console.Clear();
                 var userOptions = new List<string>
-                {
-                    "1. Delete User",
-                    "2. Change User Admin Status",
-                    "3. Change User Password",
-                    "4. Back to Admin Panel"
-                };
+        {
+            "1. Edit Customer Details",
+            "2. View Order History",
+            "3. Delete User",
+            "4. Change User Admin Status",
+            "5. Change User Password",
+            "6. Back to Admin Panel"
+        };
+
                 var windowUsers = new Window("MANAGE USERS", 2, 2, userOptions);
                 windowUsers.Draw();
 
                 var users = db.Users.ToList();
                 var userLines = users.Select(u => $"Id: {u.Id} {u.Username} {(u.IsAdmin ? "Admin:" : "User:")} ").ToList();
-                var windowUserList = new Window("USER LIST", 40, 2, userLines);
-                windowUserList.Draw();
+
+                new Window("USER LIST", 40, 2, userLines).Draw();
 
                 Console.SetCursorPosition(2, userOptions.Count + 4);
-                int choice = Helper.GetValidInteger();
+                int choice = Helper.GetValidIntegerMinMax("Select option: ", 1, 6);
 
                 switch (choice)
                 {
-
-                    case 1:
-                        Console.Write("Enter User ID to Delete: ");
-                        int userIdToDelete = Helper.GetValidInteger();
-                        var userToDelete = db.Users.Find(userIdToDelete);
-                        if (userToDelete != null)
-                        {
-                            db.Users.Remove(userToDelete);
-                            db.SaveChanges();
-                            Console.WriteLine("User deleted successfully.");
-                        }
-                        else
-                        {
-                            Console.WriteLine("User not found.");
-                        }
+                    case 1: // Edit Customer Details
+                        EditCustomerDetails();
                         break;
 
-                    case 2:
-                        Console.Write("Enter User ID to Change Admin Status: ");
-                        int userIdToChange = Helper.GetValidInteger();
-                        var userToChange = db.Users.Find(userIdToChange);
-                        if (userToChange != null)
-                        {
-                            userToChange.IsAdmin = !userToChange.IsAdmin;
-                            db.SaveChanges();
-                            Console.WriteLine($"User admin status changed to: {userToChange.IsAdmin}");
-                        }
-                        else
-                        {
-                            Console.WriteLine("User not found.");
-                        }
+                    case 2: // View Order History
+                        ViewOrderHistory();
                         break;
 
-                    case 3: 
-                        Console.Write("Enter User ID to Change Password: ");
-                        int userIdToChangePassword = Helper.GetValidInteger();
-                        var userToChangePassword = db.Users.Find(userIdToChangePassword);
-                        AuthService.ChangePassword(userToChangePassword);
+                    case 3: // Delete User
+                        DeleteUser();
                         break;
 
-                    case 4:
+                    case 4: // Change Admin Status
+                        ToggleAdminStatus();
+                        break;
+
+                    case 5: // Change Password
+                        ChangeUserPassword();
+                        break;
+
+                    case 6: // Exit
                         return;
-
-                    default:
-                        Console.WriteLine("Invalid choice. Please try again.");
-                        break;
                 }
                 Helper.PressKeyToContinue();
             }
+        }
+
+        private static void EditCustomerDetails()
+        {
+            using var db = new AppDbContext();
+            Console.Write("Enter User ID: ");
+            int userId = Helper.GetValidInteger();
+
+            var user = db.Users
+                .Include(u => u.Customer)
+                .FirstOrDefault(u => u.Id == userId);
+
+            if (user == null)
+            {
+                Console.WriteLine("User not found!");
+                return;
+            }
+
+            if (user.Customer == null)
+            {
+                Console.WriteLine("No customer details exist. Create new? (Y/N)");
+                if (Console.ReadKey().Key != ConsoleKey.Y)
+                    return;
+
+                user.Customer = new Customer { UserId = user.Id };
+            }
+
+            EditCustomerField("Full Name", user.Customer.FullName, v => user.Customer.FullName = v);
+            EditCustomerField("Address", user.Customer.Address, v => user.Customer.Address = v);
+            EditCustomerField("City", user.Customer.City, v => user.Customer.City = v);
+            EditCustomerField("Postal Code", user.Customer.PostalCode, v => user.Customer.PostalCode = v);
+            EditCustomerField("Country", user.Customer.Country, v => user.Customer.Country = v);
+            EditCustomerField("Phone", user.Customer.Phone, v => user.Customer.Phone = v);
+
+            db.SaveChanges();
+            Console.WriteLine("Customer details updated!");
+        }
+
+        private static void EditCustomerField(string fieldName, string currentValue, Action<string> setter)
+        {
+            Console.Write($"{fieldName} ({currentValue}): ");
+            var newValue = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(newValue))
+            {
+                setter(newValue);
+            }
+        }
+
+        private static void ViewOrderHistory()
+        {
+            using var db = new AppDbContext();
+            Console.Write("Enter User ID: ");
+            int userId = Helper.GetValidInteger();
+
+            var customer = db.Customers
+                .Include(c => c.User)
+                .FirstOrDefault(c => c.UserId == userId);
+
+            if (customer == null)
+            {
+                Console.WriteLine("No customer details found!");
+                return;
+            }
+
+            var orders = db.Orders
+                .Where(o => o.CustomerId == customer.Id)
+                .Include(o => o.Items)
+                    .ThenInclude(i => i.Product)
+                .OrderByDescending(o => o.OrderDate)
+                .ToList();
+
+            var orderLines = new List<string>();
+            foreach (var order in orders)
+            {
+                orderLines.Add($"Order #{order.Id} - {order.OrderDate:yyyy-MM-dd}");
+                orderLines.Add($"Total: {order.Total + order.ShippingCost + order.VAT:C}");
+                orderLines.AddRange(order.Items.Select(i =>
+                    $"{i.Product.Name} x{i.Quantity} @ {i.Product.Price:C}"
+                ));
+                orderLines.Add("");
+            }
+
+            new Window($"ORDER HISTORY FOR {customer.FullName}", 2, 2, orderLines).Draw();
+        }
+
+        private static void DeleteUser()
+        {
+            using var db = new AppDbContext();
+            Console.Write("Enter User ID to Delete: ");
+            int userId = Helper.GetValidInteger();
+            var user = db.Users.Find(userId);
+
+            if (user != null)
+            {
+                db.Users.Remove(user);
+                db.SaveChanges();
+                Console.WriteLine("User deleted successfully.");
+            }
+            else
+            {
+                Console.WriteLine("User not found.");
+            }
+        }
+
+        private static void ToggleAdminStatus()
+        {
+            using var db = new AppDbContext();
+            Console.Write("Enter User ID: ");
+            int userId = Helper.GetValidInteger();
+            var user = db.Users.Find(userId);
+
+            if (user != null)
+            {
+                user.IsAdmin = !user.IsAdmin;
+                db.SaveChanges();
+                Console.WriteLine($"Admin status changed to: {user.IsAdmin}");
+            }
+            else
+            {
+                Console.WriteLine("User not found.");
+            }
+        }
+
+        private static void ChangeUserPassword()
+        {
+            using var db = new AppDbContext();
+            Console.Write("Enter User ID: ");
+            int userId = Helper.GetValidInteger();
+            var user = db.Users.Find(userId);
+
+            AuthService.ChangePassword(user);
         }
 
 

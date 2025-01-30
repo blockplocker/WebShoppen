@@ -76,7 +76,7 @@ namespace WebShoppen
                 windowUserMenu.Draw();
 
                 var welcomeText = new List<string> { "Welcome to Our Webshop!", "Find the best products at great prices!" };
-                var windowWelcome = new Window("HOME", 25, 2, welcomeText);
+                var windowWelcome = new Window("HOME", 30, 2, welcomeText);
                 windowWelcome.Draw();
 
                 var featuredProducts = db.Products.Where(p => p.IsFeatured).Take(3).ToList();
@@ -108,7 +108,7 @@ namespace WebShoppen
                 if (currentUser?.Cart?.Items == null || !currentUser.Cart.Items.Any())
                 {
                     var emptyCart = new List<string> { "Your cart is empty!" };
-                    var windowCart = new Window("CART", 100, 2, emptyCart);
+                    var windowCart = new Window("CART", 120, 2, emptyCart);
                     windowCart.Draw();
                 }
                 else

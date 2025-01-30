@@ -8,6 +8,26 @@ namespace WebShoppen
 {
     public class Helper
     {
+
+        public static int GetValidIntegerMinMax(string prompt, int min = int.MinValue, int max = int.MaxValue)
+        {
+            int result;
+            while (true)
+            {
+                try
+                {
+                    Console.Write(prompt);
+                    if (int.TryParse(Console.ReadLine(), out result) && result >= min && result <= max)
+                        return result;
+
+                    Console.WriteLine($"Invalid input. Please enter a number between {min} and {max}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"An error occurred: {ex.Message}");
+                }
+            }
+        }
         public static int GetValidInteger()
         {
             while (true)
@@ -20,12 +40,12 @@ namespace WebShoppen
                     }
                     else
                     {
-                        Console.WriteLine("Ogiltigt val, försök igen.");
+                        Console.WriteLine("Wrong input, try again.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Ett fel inträffade: {ex.Message}");
+                    Console.WriteLine($"An error occurred: {ex.Message}");
                 }
             }
         }

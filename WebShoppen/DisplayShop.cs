@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Channels;
@@ -11,120 +12,160 @@ namespace WebShoppen
 {
     internal class DisplayShop
     {
-
-
-
-
-
-
-
-
-        public static void ShowHomePage()
-        {
-            Console.Clear();
-            using var db = new AppDbContext();
-            var welcomeText = new List<string>
-    {
-        "Welcome to Our Webshop!",
-        "Find the best products at great prices!"
-    };
-            var windowWelcome = new Window("HOME", 2, 2, welcomeText);
-            windowWelcome.Draw();
-
-            var featuredProducts = db.Products.Where(p => p.IsFeatured).Take(3).ToList();
-
-            if (featuredProducts.Count > 0)
-            {
-                var Product1 = featuredProducts[0];
-                var featuredProductList1 = new List<string> { Product1.Name, Product1.Description, "Price: " + Product1.Price + " kr", "Press A to buy" };
-                var windowFeatured1 = new Window("FEATURED PRODUCT 1", 2, 7, featuredProductList1);
-                windowFeatured1.Draw();
-            }
-
-            if (featuredProducts.Count > 1)
-            {
-                var Product2 = featuredProducts[1];
-                var featuredProductList2 = new List<string> { Product2.Name, Product2.Description, "Price: " + Product2.Price + " kr", "Press B to buy" };
-                var windowFeatured2 = new Window("FEATURED PRODUCT 2", 30, 7, featuredProductList2);
-                windowFeatured2.Draw();
-            }
-
-            if (featuredProducts.Count > 2)
-            {
-                var Product3 = featuredProducts[2];
-                var featuredProductList3 = new List<string> { Product3.Name, Product3.Description, "Price: " + Product3.Price + " kr", "Press C to buy" };
-                var windowFeatured3 = new Window("FEATURED PRODUCT 3", 58, 7, featuredProductList3);
-                windowFeatured3.Draw();
-            }
-
-            Console.SetCursorPosition(2, 13);
-            Helper.PressKeyToContinue();
-        }
-
         public static void ShowShopPage(User user)
         {
             using var db = new AppDbContext();
+
             while (true)
             {
                 Console.Clear();
+                var menuOptions = new List<string>
+            {
+                "1. Search Products",
+                "2. Browse Categories",
+                "3. View Cart",
+                "4. Back to Main Menu"
+            };
 
-                // Display categories
-                var categories = db.Categories.ToList();
-                var categoryList = categories.Select(c => $"Id: {c.Id} {c.Name}").ToList();
-                var windowCategories = new Window("SHOP CATEGORIES", 2, 2, categoryList);
-                windowCategories.Draw();
+                new Window("SHOP MENU", 2, 2, menuOptions).Draw();
+                Console.SetCursorPosition(2, menuOptions.Count + 4);
 
-                Console.SetCursorPosition(2, categoryList.Count + 4);
-                Console.Write("Enter category ID to browse (0 to exit): ");
-                int categoryId = Helper.GetValidInteger();
+                int choice = Helper.GetValidIntegerMinMax("Select option: ", 1, 4);
 
-                if (categoryId == 0) break;
-
-                // Display products in the selected category
-                var products = db.Products.Where(p => p.CategoryId == categoryId).ToList();
-                var productList = products.Select(p => $"Id: {p.Id} {p.Name} - {p.Price} SEK").ToList();
-                var windowProducts = new Window("PRODUCTS", 2, 8, productList);
-                windowProducts.Draw();
-
-                Console.SetCursorPosition(2, 14);
-                Console.Write("Enter product ID to view details (0 to go back): ");
-                int productId = Helper.GetValidInteger();
-
-                if (productId == 0) continue;
-
-                ShowProductDetails(user, productId);
+                switch (choice)
+                {
+                    case 1:
+                        ShowSearchProducts(user);
+                        break;
+                    case 2:
+                        BrowseCategories(user);
+                        break;
+                    case 3:
+                        ShowCartPage(user);
+                        break;
+                    case 4:
+                        return;
+                }
             }
         }
 
-        public static void ShowProductDetails(User user, int productId)
+        private static void ShowSearchProducts(User user)
         {
             using var db = new AppDbContext();
-            var product = db.Products.Find(productId);
-            if (product == null)
+            Console.Clear();
+            new Window("PRODUCT SEARCH", 2, 2, new List<string>() {"                                                                                            " }).Draw();
+
+            Console.SetCursorPosition(3, 3);
+            Console.Write("Enter search term: ");
+            string searchTerm = Console.ReadLine();
+
+            var results = db.Products
+                .Where(p => EF.Functions.Like(p.Name, $"%{searchTerm}%") ||
+                            EF.Functions.Like(p.Description, $"%{searchTerm}%"))
+                .Take(20)
+                .ToList();
+
+            ShowProductList(user, results,
+                $"Search Results for '{searchTerm}'",
+                $"No products found matching '{searchTerm}'");
+        }
+
+        private static void BrowseCategories(User user)
+        {
+            using var db = new AppDbContext();
+            var categories = db.Categories.ToList();
+
+            while (true)
             {
-                Console.WriteLine("Product not found.");
+                Console.Clear();
+                var categoryItems = categories
+                    .Select((c, i) => $"{i + 1}. {c.Name}")
+                    .Concat(new[] { $"{categories.Count + 1}. Back" })
+                    .ToList();
+
+                new Window("CATEGORIES", 2, 2, categoryItems).Draw();
+
+                int choice = Helper.GetValidIntegerMinMax("Select category: ", 1, categories.Count + 1);
+
+                if (choice == categories.Count + 1) break;
+
+                var selectedCategory = categories[choice - 1];
+                ShowCategoryProducts(user, selectedCategory);
+            }
+        }
+
+        private static void ShowCategoryProducts(User user, Category category)
+        {
+            using var db = new AppDbContext();
+            var products = db.Products
+                .Where(p => p.CategoryId == category.Id)
+                .Take(20)
+                .ToList();
+
+            ShowProductList(user, products,
+                $"{category.Name} Products",
+                $"No products found in {category.Name} category");
+        }
+
+        private static void ShowProductList(User user, List<Product> products, string title, string emptyMessage)
+        {
+            if (!products.Any())
+            {
+                new Window("INFO", 2, 2, new List<string> { emptyMessage }).Draw();
                 Helper.PressKeyToContinue();
                 return;
             }
 
-            var details = new List<string>
-    {
-        $"Name: {product.Name}",
-        $"Description: {product.Description}",
-        $"Price: {product.Price} SEK"
-    };
-            var windowDetails = new Window("PRODUCT DETAILS", 2, 2, details);
-            windowDetails.Draw();
-
-            Console.SetCursorPosition(2, 8);
-            Console.Write("Enter quantity to purchase (0 to cancel): ");
-            int quantity = Helper.GetValidInteger();
-
-            if (quantity > 0)
+            while (true)
             {
-                ProductService.AddToCart(user, productId, quantity);
-                Console.WriteLine("Product added to cart!");
-                Helper.PressKeyToContinue();
+                Console.Clear();
+                var productItems = products
+                    .Select((p, i) => $"{i + 1}. {p.Name} - {p.Price:C}")
+                    .Concat(new[] { $"{products.Count + 1}. Back" })
+                    .ToList();
+
+                new Window(title, 2, 2, productItems).Draw();
+
+                int choice = Helper.GetValidIntegerMinMax("Select product: ", 1, products.Count + 1);
+
+                if (choice == products.Count + 1) return;
+
+                var selectedProduct = products[choice - 1];
+                ShowProductDetails(user, selectedProduct);
+            }
+        }
+
+        private static void ShowProductDetails(User user, Product product)
+        {
+            while (true)
+            {
+                Console.Clear();
+                var details = new List<string>
+            {
+                $"Name: {product.Name}",
+                $"Description: {product.Description}",
+                $"Price: {product.Price:C}",
+                $"Stock: {product.Stock}",
+                "",
+                "1. Add to Cart",
+                "2. Back"
+            };
+
+                new Window("PRODUCT DETAILS", 2, 2, details).Draw();
+
+                int choice = Helper.GetValidIntegerMinMax("Select option: ", 1, 2);
+
+                if (choice == 1)
+                {
+                    int quantity = Helper.GetValidIntegerMinMax("Enter quantity: ", 1, 100);
+                    ProductService.AddToCart(user, product.Id, quantity);
+                    Console.WriteLine("Added to cart!");
+                    Helper.PressKeyToContinue();
+                }
+                else
+                {
+                    return;
+                }
             }
         }
 
@@ -261,8 +302,8 @@ namespace WebShoppen
 
                 if (!isNewCustomer)
                 {
-                    var choice = Console.ReadKey().KeyChar.ToString().ToUpper();
-                    if (choice == "Y")
+                    string choiceYesOrNo = Console.ReadKey().KeyChar.ToString().ToUpper();
+                    if (choiceYesOrNo == "Y")
                     {
                         break; // Use existing details
                     }
@@ -307,17 +348,19 @@ namespace WebShoppen
 
             }
             // Shipping options
-            var shippingOptions = new List<string> { "1. Standard Shipping - 50 SEK", "2. Express Shipping - 100 SEK" };
+            var shippingOptions = new List<string> { $"1. Standard Shipping - {(int)ShippingOption.Standard} SEK", $"2. Express Shipping - {(int)ShippingOption.Express} SEK", $"3. Home Delivery - {(int)ShippingOption.HomeDelivery} SEK" };
 
             Console.Clear();
             var windowShipping = new Window("SHIPPING OPTIONS", 2, 2, shippingOptions);
             windowShipping.Draw();
 
-            Console.SetCursorPosition(2, 6);
+            Console.SetCursorPosition(2, 8);
             Console.Write("Enter shipping option: ");
-            int shippingCost = Console.ReadLine() == "1" ? 50 : 100;
+            int choice = Helper.GetValidInteger();
 
-            ShowPaymentPage(user, shippingCost);
+            int selectedShipping = choice == 1 ? (int)ShippingOption.Standard : choice == 2 ? (int)ShippingOption.Express : choice == 3 ? (int)ShippingOption.HomeDelivery : (int)ShippingOption.Standard;
+
+            ShowPaymentPage(user, selectedShipping);
         }
 
         public static void ShowPaymentPage(User user, int shippingCost)
