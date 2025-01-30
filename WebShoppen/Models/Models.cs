@@ -163,8 +163,8 @@ namespace WebShoppen.Models
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            //optionsBuilder.UseSqlServer("Server=tcp:databasenoa.database.windows.net,1433;Initial Catalog=webshop;Persist Security Info=False;User ID=noadb;Password=Hemligt123;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");  // Azure
-            optionsBuilder.UseSqlServer(@"Server=.\SQLExpress;Database=webshop;Trusted_Connection=True;TrustServerCertificate=True;");   //local
+            optionsBuilder.UseSqlServer("Server=tcp:databasenoa.database.windows.net,1433;Initial Catalog=webshop;Persist Security Info=False;User ID=noadb;Password=Hemligt123;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");  // Azure
+            //optionsBuilder.UseSqlServer(@"Server=.\SQLExpress;Database=webshop;Trusted_Connection=True;TrustServerCertificate=True;");   //local
         }
     }
 }

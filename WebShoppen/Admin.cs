@@ -210,15 +210,36 @@ namespace WebShoppen
                 var windowCategories = new Window("MANAGE CATEGORIES", 2, 2, categoryOptions);
                 windowCategories.Draw();
 
+
+                
+
                 var products = db.Products.ToList();
+                if (products.Any())
+                {
                 var productLines = products.Select(p => $"Id: {p.Id} - {p.Name} - {p.Price} kr - {p.Stock} Lager").ToList();
                 var windowProductList = new Window("PRODUCTS", 50, 2, productLines);
                 windowProductList.Draw();
+                }
+                else
+                {
+                    var emptyCart = new List<string> { "There are no products!" };
+                    var windowCart = new Window("PRODUCTS", 50, 2, emptyCart);
+                    windowCart.Draw();
+                }
 
                 var categories = db.Categories.ToList();
+                if (categories.Any())
+                {
                 var categoryLines = categories.Select(c => $"Id: {c.Id} - {c.Name}").ToList();
                 var windowCategoryList = new Window("CATEGORIES", 30, 2, categoryLines);
                 windowCategoryList.Draw();
+                }
+                else
+                {
+                    var emptyCart = new List<string> { "There are no categories!" };
+                    var windowCart = new Window("CATEGORIES", 30, 2, emptyCart);
+                    windowCart.Draw();
+                }
 
                 Console.SetCursorPosition(2, categoryOptions.Count + 4);
                 int choice = Helper.GetValidInteger();
