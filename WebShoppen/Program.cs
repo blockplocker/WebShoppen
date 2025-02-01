@@ -114,7 +114,7 @@ namespace WebShoppen
                 else
                 {
                     var cartItems = currentUser.Cart.Items.Select(i => $"{i.Product.Name} x{i.Quantity} ").ToList();
-                    var windowCartWithItems = new Window("CART", 100, 2, cartItems);
+                    var windowCartWithItems = new Window("CART", 120, 2, cartItems);
                     windowCartWithItems.Draw();
                 }
 
