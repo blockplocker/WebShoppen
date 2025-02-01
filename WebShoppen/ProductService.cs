@@ -130,6 +130,8 @@ namespace WebShoppen
             db.Carts.Remove(user.Cart);
             db.SaveChanges();
 
+            MongoLogger.Log("OrderPlaced", $"User {user.Username} placed order");
+
             Console.WriteLine("Payment successful! Your order has been placed.");
             Helper.PressKeyToContinue();
         }

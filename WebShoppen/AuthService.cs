@@ -25,7 +25,16 @@ namespace WebShoppen
                 var user = await db.Users
                     .FirstOrDefaultAsync(u => u.Username == username && u.PasswordHash == hashedPassword);
 
-                if (user == null) Console.WriteLine("Invalid credentials");
+
+                if (user != null)
+                {
+                    MongoLogger.Log("UserLogin", $"Successful login: {user.Username}");
+                }
+                else
+                {
+                    Console.WriteLine("Invalid credentials");
+                    MongoLogger.Log("FailedLogin", $"Failed login attempt: {username}");
+                }
                 Helper.PressKeyToContinue();
                 return user;
             }
@@ -68,9 +77,11 @@ namespace WebShoppen
                     return null;
                 }
 
+                
                 var user = new User { Username = username, PasswordHash = hashedPassword };
                 db.Users.Add(user);
                 await db.SaveChangesAsync();
+                MongoLogger.Log("UserRegistration", $"Successful Registration: {user.Username}");
                 return user;
             }
             catch (Exception ex)
@@ -97,6 +108,8 @@ namespace WebShoppen
                 userToChangePassword.PasswordHash = HashPassword(newPassword);
                 db.SaveChanges();
                 Console.WriteLine("User password changed successfully.");
+
+                MongoLogger.Log("PasswordChanged", $"Password changed for user: {userToChangePassword.Username}");
             }
             else
             {

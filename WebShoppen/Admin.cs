@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +18,7 @@ namespace WebShoppen
             while (true)
             {
                 Console.Clear();
-                var adminOptions = new List<string> { "1. Manage Products", "2. Manage Categories", "3. Manage Users", "4. Statistics", "5. Exit" };
+                var adminOptions = new List<string> { "1. Manage Products", "2. Manage Categories", "3. Manage Users", "4. View Activity Logs", "5. Statistics", "6. Exit" };
                 var windowAdmin = new Window("ADMIN PANEL", 2, 2, adminOptions);
                 windowAdmin.Draw();
 
@@ -45,9 +47,12 @@ namespace WebShoppen
                         ManageUsers();
                         break;
                     case 4:
-                        AdminStatisticsService.ShowStatistics().Wait();
+                        ShowActivityLogs();
                         break;
                     case 5:
+                        AdminStatisticsService.ShowStatistics().Wait();
+                        break;
+                    case 6:
                         return;
                     default:
                         Console.WriteLine("Invalid choice. Please try again.");
@@ -103,6 +108,8 @@ namespace WebShoppen
                         db.Products.Add(product);
                         db.SaveChanges();
                         Console.WriteLine("Product added successfully.");
+
+                        MongoLogger.Log("ProductAdded", $"Added product: {product.Name}");
                         break;
 
                     case 2:
@@ -145,6 +152,8 @@ namespace WebShoppen
 
                             db.SaveChanges();
                             Console.WriteLine("Product updated successfully.");
+
+                            MongoLogger.Log("ProductUpdated", $"Updated product: {productToUpdate.Name}");
                         }
                         else
                         {
@@ -161,6 +170,8 @@ namespace WebShoppen
                             db.Products.Remove(productToDelete);
                             db.SaveChanges();
                             Console.WriteLine("Product deleted successfully.");
+
+                            MongoLogger.Log("ProductDeleted", $"Deleted product ID: {productIdToDelete}");
                         }
                         else
                         {
@@ -211,14 +222,14 @@ namespace WebShoppen
                 windowCategories.Draw();
 
 
-                
+
 
                 var products = db.Products.ToList();
                 if (products.Any())
                 {
-                var productLines = products.Select(p => $"Id: {p.Id} - {p.Name} - {p.Price} kr - {p.Stock} Lager").ToList();
-                var windowProductList = new Window("PRODUCTS", 50, 2, productLines);
-                windowProductList.Draw();
+                    var productLines = products.Select(p => $"Id: {p.Id} - {p.Name} - {p.Price} kr - {p.Stock} Lager").ToList();
+                    var windowProductList = new Window("PRODUCTS", 50, 2, productLines);
+                    windowProductList.Draw();
                 }
                 else
                 {
@@ -230,9 +241,9 @@ namespace WebShoppen
                 var categories = db.Categories.ToList();
                 if (categories.Any())
                 {
-                var categoryLines = categories.Select(c => $"Id: {c.Id} - {c.Name}").ToList();
-                var windowCategoryList = new Window("CATEGORIES", 30, 2, categoryLines);
-                windowCategoryList.Draw();
+                    var categoryLines = categories.Select(c => $"Id: {c.Id} - {c.Name}").ToList();
+                    var windowCategoryList = new Window("CATEGORIES", 30, 2, categoryLines);
+                    windowCategoryList.Draw();
                 }
                 else
                 {
@@ -253,6 +264,8 @@ namespace WebShoppen
                         db.Categories.Add(category);
                         db.SaveChanges();
                         Console.WriteLine("Category added successfully.");
+
+                        MongoLogger.Log("CategoryAdded", $"Added Category: {category.Name}");
                         break;
 
                     case 2:
@@ -265,6 +278,7 @@ namespace WebShoppen
                             categoryToUpdate.Name = Console.ReadLine();
                             db.SaveChanges();
                             Console.WriteLine("Category updated successfully.");
+                            MongoLogger.Log("CategoryUpdated", $"Updated Category: {categoryToUpdate.Name}");
                         }
                         else
                         {
@@ -281,6 +295,8 @@ namespace WebShoppen
                             db.Categories.Remove(categoryToDelete);
                             db.SaveChanges();
                             Console.WriteLine("Category deleted successfully.");
+
+                            MongoLogger.Log("CategoryDeleted", $"Deleted Category: {categoryToDelete.Name}");
                         }
                         else
                         {
@@ -447,6 +463,8 @@ namespace WebShoppen
 
             if (user != null)
             {
+                MongoLogger.Log("UserDeleted", $"Deleted user: {user.Username}");
+
                 db.Users.Remove(user);
                 db.SaveChanges();
                 Console.WriteLine("User deleted successfully.");
@@ -469,6 +487,8 @@ namespace WebShoppen
                 user.IsAdmin = !user.IsAdmin;
                 db.SaveChanges();
                 Console.WriteLine($"Admin status changed to: {user.IsAdmin}");
+
+                MongoLogger.Log("AdminStatusChanged", $"User {user.Username} status: {user.IsAdmin}");
             }
             else
             {
@@ -484,6 +504,76 @@ namespace WebShoppen
             var user = db.Users.Find(userId);
 
             AuthService.ChangePassword(user);
+        }
+
+
+        private static void ShowActivityLogs()
+        {
+            using var db = new AppDbContext();
+            var filterOptions = new List<string>
+    {
+        "1. All Activity",
+        "2. Order Activities",
+        "3. Login Activities",
+        "4. Product Activities",
+        "5. Category Activities",
+        "6. User Activities",
+        "7. Back"
+    };
+
+            while (true)
+            {
+                Console.Clear();
+                new Window("ACTIVITY LOGS", 2, 2, filterOptions).Draw();
+
+                int choice = Helper.GetValidIntegerMinMax("Select log type: ", 1, 7);
+                if (choice == 7) return;
+
+                var logs = GetLogsByType(choice);
+                DisplayLogs(logs);
+            }
+        }
+
+        private static List<BsonDocument> GetLogsByType(int choice)
+        {
+            var filterBuilder = Builders<BsonDocument>.Filter;
+            FilterDefinition<BsonDocument> filter = choice switch
+            {
+                1 => filterBuilder.Empty,
+                2 => filterBuilder.Regex("action", new BsonRegularExpression("Order")),
+                3 => filterBuilder.Or(
+                        filterBuilder.Eq("action", "UserLogin"),
+                        filterBuilder.Eq("action", "FailedLogin"),
+                        filterBuilder.Eq("action", "UserRegistration")),
+                4 => filterBuilder.Regex("action", new BsonRegularExpression("Product")),
+                5 => filterBuilder.Regex("action", new BsonRegularExpression("Category")),
+                6 => filterBuilder.Regex("action", new BsonRegularExpression("User|Admin")),
+                _ => filterBuilder.Empty
+            };
+
+            return MongoLogger.GetLogs(filter);
+        }
+
+        private static void DisplayLogs(List<BsonDocument> logs)
+        {
+            var logLines = new List<string>();
+
+            foreach (var log in logs.OrderByDescending(l => l["timestamp"]))
+            {
+                var timestamp = log["timestamp"].ToUniversalTime().ToString("yyyy-MM-dd HH:mm");
+                var action = log["action"].AsString.PadRight(20);
+                var details = log["details"];
+
+                logLines.Add($"{timestamp} | {action} | {details}");
+            }
+
+            if (!logLines.Any())
+            {
+                logLines.Add("No logs found for this category");
+            }
+
+            new Window("LOGS", 2, 6, logLines).Draw();
+            Helper.PressKeyToContinue();
         }
 
 
