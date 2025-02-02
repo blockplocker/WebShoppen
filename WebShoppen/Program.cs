@@ -155,7 +155,7 @@ namespace WebShoppen
                     case "5":
                         if (currentUser.IsAdmin)
                         {
-                            Admin.AdminPanel();
+                            Services.Admin.Admin.AdminPanel();
                         }
                         break;
                 }

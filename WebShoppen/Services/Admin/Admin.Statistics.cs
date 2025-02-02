@@ -7,9 +7,9 @@ using System.Text;
 using System.Threading.Tasks;
 using WebShoppen.Models;
 
-namespace WebShoppen
+namespace WebShoppen.Services.Admin
 {
-    public static class AdminStatisticsService
+    internal partial class Admin
     {
         public static async Task ShowStatistics()
         {
